@@ -1,6 +1,8 @@
 package com.redhat.coolstore.catalog.verticle.service;
 
 import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 import com.redhat.coolstore.catalog.model.Product;
 
@@ -21,31 +23,34 @@ public class CatalogServiceImpl implements CatalogService {
 
     @Override
     public void getProducts(Handler<AsyncResult<List<Product>>> resulthandler) {
-        // ----
-        // To be implemented
-        // 
-        // Use the `MongoClient.find()` method. 
-        // Use an empty JSONObject for the query
-        // The collection to search is "products"
-        // In the handler implementation, transform the `List<JSONObject>` to `List<Person>` - use Java8 Streams!
-        // Use a Future to set the result on the handle() method of the result handler
-        // Don't forget to handle failures!
-        // ----
+        JsonObject query = new JsonObject();
+        client.find("products", query, ar -> {
+            if (ar.succeeded()) {
+                List<Product> products = ar.result().stream()
+                                           .map(json -> new Product(json))
+                                           .collect(Collectors.toList());
+                resulthandler.handle(Future.succeededFuture(products));
+            } else {
+                resulthandler.handle(Future.failedFuture(ar.cause()));
+            }
+        });
     }
 
     @Override
     public void getProduct(String itemId, Handler<AsyncResult<Product>> resulthandler) {
-        // ----
-        // To be implemented
-        // 
-        // Use the `MongoClient.find()` method. 
-        // Use a JSONObject for the query with the field 'itemId' set to the product itemId
-        // The collection to search is "products"
-        // In the handler implementation, transform the `List<JSONObject>` to `Person` - use Java8 Streams!
-        // If the product is not found, the result should be set to null
-        // Use a Future to set the result on the handle() method of the result handler
-        // Don't forget to handle failures!
-        // ----
+        JsonObject query = new JsonObject().put("itemId", itemId);
+        client.find("products", query, ar -> {
+            if (ar.succeeded()) {
+                Optional<JsonObject> result = ar.result().stream().findFirst();
+                if (result.isPresent()) {
+                    resulthandler.handle(Future.succeededFuture(new Product(result.get())));
+                } else {
+                    resulthandler.handle(Future.succeededFuture(null));
+                }
+            } else {
+                resulthandler.handle(Future.failedFuture(ar.cause()));
+            }
+        });
     }
 
     @Override
@@ -63,4 +68,5 @@ public class CatalogServiceImpl implements CatalogService {
         document.put("_id", product.getItemId());
         return document;
     }
+
 }

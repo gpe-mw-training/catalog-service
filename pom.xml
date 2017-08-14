@@ -47,7 +47,22 @@
       <groupId>io.vertx</groupId>
       <artifactId>vertx-mongo-client</artifactId>
     </dependency>
-    <!-- TODO: Insert dependencies for Kubernetes ConfigMap support--> 
+    <dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-config</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-config-kubernetes-configmap</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-health-check</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-config-yaml</artifactId>
+    </dependency>
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
