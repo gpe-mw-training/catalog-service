@@ -3,7 +3,7 @@ package com.redhat.coolstore.catalog.verticle;
 import com.redhat.coolstore.catalog.api.ApiVerticle;
 import com.redhat.coolstore.catalog.verticle.service.CatalogService;
 import com.redhat.coolstore.catalog.verticle.service.CatalogVerticle;
-import com.uber.jaeger.Configuration;
+import io.jaegertracing.Configuration;
 import io.opentracing.util.GlobalTracer;
 import io.vertx.config.ConfigRetriever;
 import io.vertx.config.ConfigRetrieverOptions;
@@ -89,20 +89,18 @@ public class MainVerticle extends AbstractVerticle {
             return;
         }
 
-        Configuration configuration = new Configuration(
-                serviceName,
-                new Configuration.SamplerConfiguration(
-                        config.getString("sampler-type"),
-                        getPropertyAsNumber(config, "sampler-param"),
-                        config.getString("sampler-manager-host-port")),
-                new Configuration.ReporterConfiguration(
-                        config.getBoolean("reporter-log-spans"),
-                        config.getString("agent-host"),
-                        config.getInteger("agent-port"),
-                        config.getInteger("reporter-flush-interval"),
-                        config.getInteger("reporter-max-queue-size")
-                )
-        );
+        Configuration configuration = new Configuration(serviceName)
+                .withSampler(new Configuration.SamplerConfiguration()
+                        .withType(config.getString("sampler-type"))
+                        .withParam(getPropertyAsNumber(config, "sampler-param"))
+                        .withManagerHostPort(config.getString("sampler-manager-host-port")))
+                .withReporter(new Configuration.ReporterConfiguration()
+                        .withLogSpans(config.getBoolean("reporter-log-spans"))
+                        .withFlushInterval(config.getInteger("reporter-flush-interval"))
+                        .withMaxQueueSize(config.getInteger("reporter-flush-interval"))
+                        .withSender(new Configuration.SenderConfiguration()
+                                .withAgentHost(config.getString("agent-host"))
+                                .withAgentPort(config.getInteger("agent-port"))));
         GlobalTracer.register(configuration.getTracer());
     }
 
