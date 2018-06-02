@@ -4,7 +4,11 @@ import java.util.List;
 
 import com.redhat.coolstore.catalog.model.Product;
 import com.redhat.coolstore.catalog.verticle.service.CatalogService;
-
+import io.opentracing.Span;
+import io.opentracing.Tracer;
+import io.opentracing.contrib.vertx.ext.web.TracingHandler;
+import io.opentracing.tag.Tags;
+import io.opentracing.util.GlobalTracer;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonArray;
@@ -19,6 +23,8 @@ public class ApiVerticle extends AbstractVerticle {
 
     private CatalogService catalogService;
 
+    private Tracer tracer;
+
     public ApiVerticle(CatalogService catalogService) {
         this.catalogService = catalogService;
     }
@@ -26,7 +32,12 @@ public class ApiVerticle extends AbstractVerticle {
     @Override
     public void start(Future<Void> startFuture) throws Exception {
 
+        tracer = GlobalTracer.get();
+
         Router router = Router.router(vertx);
+
+        TracingHandler handler = new TracingHandler(tracer);
+        router.route().order(-1).handler(handler).failureHandler(handler);
         router.get("/products").handler(this::getProducts);
         router.get("/product/:itemId").handler(this::getProduct);
         router.route("/product").handler(BodyHandler.create());
@@ -50,16 +61,22 @@ public class ApiVerticle extends AbstractVerticle {
     }
 
     private void getProducts(RoutingContext rc) {
+        Span span = tracer.buildSpan("getProducts")
+                .asChildOf(TracingHandler.serverSpanContext(rc))
+                .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)
+                .startManual();
+
         catalogService.getProducts(ar -> {
+            span.finish();
             if (ar.succeeded()) {
                 List<Product> products = ar.result();
                 JsonArray json = new JsonArray();
                 products.stream()
-                    .map(p -> p.toJson())
-                    .forEach(p -> json.add(p));
+                        .map(p -> p.toJson())
+                        .forEach(p -> json.add(p));
                 rc.response()
-                    .putHeader("Content-type", "application/json")
-                    .end(json.encodePrettily());
+                        .putHeader("Content-type", "application/json")
+                        .end(json.encodePrettily());
             } else {
                 rc.fail(ar.cause());
             }
@@ -67,16 +84,22 @@ public class ApiVerticle extends AbstractVerticle {
     }
 
     private void getProduct(RoutingContext rc) {
+        Span span = tracer.buildSpan("getProduct")
+                .asChildOf(TracingHandler.serverSpanContext(rc))
+                .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)
+                .startManual();
+
         String itemId = rc.request().getParam("itemid");
         catalogService.getProduct(itemId, ar -> {
+            span.finish();
             if (ar.succeeded()) {
                 Product product = ar.result();
                 JsonObject json;
                 if (product != null) {
                     json = product.toJson();
                     rc.response()
-                        .putHeader("Content-type", "application/json")
-                        .end(json.encodePrettily());
+                            .putHeader("Content-type", "application/json")
+                            .end(json.encodePrettily());
                 } else {
                     rc.fail(404);
                 }
@@ -87,8 +110,14 @@ public class ApiVerticle extends AbstractVerticle {
     }
 
     private void addProduct(RoutingContext rc) {
+        Span span = tracer.buildSpan("addProduct")
+                .asChildOf(TracingHandler.serverSpanContext(rc))
+                .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)
+                .startManual();
+
         JsonObject json = rc.getBodyAsJson();
         catalogService.addProduct(new Product(json), ar -> {
+            span.finish();
             if (ar.succeeded()) {
                 rc.response().setStatusCode(201).end();
             } else {
