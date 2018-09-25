@@ -17,26 +17,39 @@ import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 
 public class MainVerticle extends AbstractVerticle {
+	
+	private static final String APP_CONFIGMAP_NAME = "APP_CONFIGMAP_NAME";
+	private static final String APP_CONFIGMAP_KEY = "APP_CONFIGMAP_KEY";
 
     Logger log = LoggerFactory.getLogger(MainVerticle.class);
 
     @Override
     public void start(Future<Void> startFuture) throws Exception {
-
-        ConfigStoreOptions jsonConfigStore = new ConfigStoreOptions().setType("json");
-        ConfigStoreOptions appStore = new ConfigStoreOptions()
-            .setType("configmap")
-            .setFormat("yaml")
-            .setConfig(new JsonObject()
-                .put("name", System.getenv("APP_CONFIGMAP_NAME"))
-                .put("key", System.getenv("APP_CONFIGMAP_KEY")));
+    	
 
         ConfigRetrieverOptions options = new ConfigRetrieverOptions();
         if (System.getenv("KUBERNETES_NAMESPACE") != null) {
-            //we're running in Kubernetes
+        	
+        	//we're running in Kubernetes
+        	// Vert.x COnfigRetriever will attempt to pull config data via Kube API
+        	
+        	if(System.getenv(APP_CONFIGMAP_NAME) == null)
+        		throw new RuntimeException("start() need to set env var: "+this.APP_CONFIGMAP_NAME);
+        	if(System.getenv(this.APP_CONFIGMAP_KEY) == null )
+        		throw new RuntimeException("start() need to set env var: "+this.APP_CONFIGMAP_KEY);
+        	
+        	log.info("start(); configmap name = "+System.getenv(APP_CONFIGMAP_NAME)+" : key = "+ System.getenv(this.APP_CONFIGMAP_KEY));
+        	
+        	ConfigStoreOptions appStore = new ConfigStoreOptions()
+        			.setType("configmap")
+        			.setFormat("yaml")
+        			.setConfig(new JsonObject()
+        					.put("name", System.getenv(APP_CONFIGMAP_NAME))
+        					.put("key", System.getenv(APP_CONFIGMAP_KEY)));
             options.addStore(appStore);
         } else {
             //default to json based config
+        	ConfigStoreOptions jsonConfigStore = new ConfigStoreOptions().setType("json");
             jsonConfigStore.setConfig(config());
             options.addStore(jsonConfigStore);
         }
@@ -99,8 +112,9 @@ public class MainVerticle extends AbstractVerticle {
                         .withFlushInterval(config.getInteger("reporter-flush-interval"))
                         .withMaxQueueSize(config.getInteger("reporter-flush-interval"))
                         .withSender(new Configuration.SenderConfiguration()
-                                .withAgentHost(config.getString("agent-host"))
-                                .withAgentPort(config.getInteger("agent-port"))));
+                        		.withEndpoint(config.getString("collector-endpoint")) ));
+                                //.withAgentHost(config.getString("agent-host"))
+                                //.withAgentPort(config.getInteger("agent-port"))));
         GlobalTracer.register(configuration.getTracer());
     }
 
