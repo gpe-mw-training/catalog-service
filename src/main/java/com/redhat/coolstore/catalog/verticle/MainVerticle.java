@@ -18,8 +18,8 @@ import io.vertx.core.logging.LoggerFactory;
 
 public class MainVerticle extends AbstractVerticle {
 	
-	private static final String APP_CONFIGMAP_NAME = "APP_CONFIGMAP_NAME";
-	private static final String APP_CONFIGMAP_KEY = "APP_CONFIGMAP_KEY";
+    private static final String APP_CONFIGMAP_NAME = "APP_CONFIGMAP_NAME";
+    private static final String APP_CONFIGMAP_KEY = "APP_CONFIGMAP_KEY";
 
     Logger log = LoggerFactory.getLogger(MainVerticle.class);
 

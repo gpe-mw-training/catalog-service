@@ -18,12 +18,16 @@ import io.vertx.ext.healthchecks.Status;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 
 public class ApiVerticle extends AbstractVerticle {
 
     private CatalogService catalogService;
 
     private Tracer tracer;
+
+    Logger log = LoggerFactory.getLogger(ApiVerticle.class);
 
     public ApiVerticle(CatalogService catalogService) {
         this.catalogService = catalogService;
@@ -61,10 +65,14 @@ public class ApiVerticle extends AbstractVerticle {
     }
 
     private void getProducts(RoutingContext rc) {
+
+
         Span span = tracer.buildSpan("getProducts")
                 .asChildOf(TracingHandler.serverSpanContext(rc))
                 .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)
                 .startManual();
+
+        log.info("getProducts() started span ...");
 
         catalogService.getProducts(ar -> {
             span.finish();
@@ -90,6 +98,9 @@ public class ApiVerticle extends AbstractVerticle {
                 .startManual();
 
         String itemId = rc.request().getParam("itemid");
+
+        log.info("getProducts() started span. itemId = "+itemId);
+
         catalogService.getProduct(itemId, ar -> {
             span.finish();
             if (ar.succeeded()) {
@@ -114,6 +125,8 @@ public class ApiVerticle extends AbstractVerticle {
                 .asChildOf(TracingHandler.serverSpanContext(rc))
                 .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)
                 .startManual();
+
+        log.info("addProduct() started span.");
 
         JsonObject json = rc.getBodyAsJson();
         catalogService.addProduct(new Product(json), ar -> {
